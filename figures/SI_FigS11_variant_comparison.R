@@ -6,7 +6,13 @@
 # Inputs : A07, A08, A10, A11 (raw and detrended)
 # Run from pub_code/:  Rscript figures/SI_FigS11_variant_comparison.R
 # =============================================================================
+# Shows which directional results depend on detrending: a bar that flips
+# sign between raw and detrended reverses the inferred direction for that
+# pair. TE bars whose leading direction is not significant are greyed.
+# =============================================================================
 source("lib/pub_setup.R")
+
+VARIANTS <- c("raw", "detrended")
 
 analysis_lvl <- c("CCF peak lag (h)", "Coherence delay (h)", "Net ETE (bits)", "Net ETE @ u* (bits)")
 
@@ -31,7 +37,7 @@ fig_df <- bind_rows(
 ) %>%
   mutate(variant  = factor(variant, levels = VARIANTS),
          analysis = factor(analysis, levels = analysis_lvl),
-         Pair     = factor(Pair, levels = all_pair_levels),
+         Pair     = factor(Pair, levels = PAIR_LEVELS),
          fill_cat = ifelse(sig, as.character(variant), "ns"))
 
 g <- ggplot(fig_df, aes(x = Pair, y = value, fill = fill_cat, group = variant)) +

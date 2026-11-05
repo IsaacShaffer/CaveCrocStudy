@@ -21,74 +21,79 @@ The repository holds only the R code for now. Before running, put the inputs in
 - `logger_placement.csv`: columns `Serial,Cave,Logger,Location,Placement`, with
   the location and placement text exactly as printed in MS Table 1
 
-R ≥ 4.6 and these packages are required: tidyverse, readxl, openxlsx,
-lubridate, scales, tseries, RTransferEntropy, future, patchwork, gridExtra.
+R ≥ 4.6 and these packages are required: dplyr, tidyr, purrr, lubridate,
+ggplot2, patchwork, readxl, openxlsx, tseries, RTransferEntropy.
 Published results were produced with R 4.6.2. The manuscript cites 4.5.2.
 
 From this directory:
 
 ```bash
-Rscript run_all.R              # everything in dependency order, ~35 min
-Rscript run_all.R MS_          # only scripts matching a pattern (inputs must exist)
-Rscript run_all.R --keep-cache # reuse cached TE-optimal results
+Rscript run_all.R              # everything, ~50 min
+Rscript run_all.R MS_          # only scripts matching a pattern
 Rscript tables/publication/MS_Table2_winter_night_by_cave.R   # any single script
 ```
 
-Every script expects this directory as the working directory. Each one reads
-only its listed inputs and writes exactly one output under `output/`. Logs go
-to `output/logs/`.
+Every script expects this directory as the working directory and writes
+exactly one output under `output/`. Logs go to `output/logs/`.
+
+**Every publication table computes from the cleaned data in `data/`**, never
+from another table, so any one can be recreated on its own. Nothing is cached:
+the transfer-entropy tables (SI Tables S5 and S6) each take several minutes.
+
+Figures read intermediate tables written by `figures/analysis/`, which are
+also computed from the data. Run those first (`run_all.R` does).
 
 ## Layout
 
+Each script holds the code specific to its output, with comments explaining
+why each step is done. `lib/` holds only code that two or more scripts use, and
+its functions carry the reasoning for the methods they implement:
+
 | Path | Contents |
 |---|---|
-| `lib/analysis_kernels.R`, `lib/L2_*.R`, `lib/analysis_processes.R` | Support libraries copied **unchanged** from the analysis repo. |
-| `lib/pub_setup.R` | Timezone pin, every reported constant, paths, read/write helpers. |
-| `lib/pub_builders.R` | `build_*()` functions behind the analysis tables. They reuse the library's per-pair functions, seeds and rounding. |
-| `tables/analysis/A*.R` | 19 analysis tables, which are intermediate and unpublished → `output/tables/analysis/*.csv` |
-| `tables/publication/*.R` | 14 publication tables → `output/tables/publication/*.csv` |
+| `lib/pub_setup.R` | Packages, timezone pin, every reported constant, logger roster and pair set, paths, read/write and formatting helpers. Sources the three files below. |
+| `lib/study_data.R` | Loading the hourly data, day/night tagging, logger record spans, winter nightly minima, the harmonic detrend, and trimming each logger pair to its longest unbroken hourly run. |
+| `lib/directional.R` | Cross-correlation, coherence, transfer entropy and delay-optimized TE, each shared by a publication table and a figure input. |
+| `lib/plots.R` | `save_figure`, facet height, and the pair-matrix heatmaps (MS Fig. 4, SI Figs. S1, S6, S7, S10). |
+| `tables/publication/*.R` | 14 publication tables, from the data → `output/tables/publication/*.csv` |
+| `figures/analysis/A*.R` | 13 intermediate tables, from the data, read by figures → `output/figures/analysis/*.csv` |
 | `figures/*.R` | 14 publication figures → `output/figures/*.png` + `.pdf` |
-| `run_all.R` | Runs all 47 scripts in dependency order, each in a fresh R process. |
+| `run_all.R` | Runs all 41 scripts (tables, figure inputs, figures), each in a fresh R process. |
 
 ## Outputs and their inputs
 
-### Analysis tables (from the data)
+### Publication tables (each from `data/` only)
 
-| Script / output | Contents |
+| Output | Computation |
 |---|---|
-| `A01_logger_record_span` | First/last timestamp per logger, over the full deployment |
-| `A02_diel_cave_month` | Day and night medians, day/night counts with ≥1 obs ≥ 24.25 °C, median nightly range, by cave × month |
-| `A03_diel_logger_month` | Same, by logger × month |
+| `MS_Table1_logger_inventory` | `data/logger_placement.csv` + `logger_record_span()` |
+| `MS_Table2_winter_night_by_cave` | Night median, % nights above threshold, nightly range; in the script |
+| `MS_Table3_winter_nightly_minimum` | Percentiles of `winter_nightly_minima()` |
+| `MS_Table4_winter_night_by_logger` | Night median and % nights above threshold per logger; in the script |
+| `MS_Table5_coherence_raw` | `coherence_peaks()`, raw |
+| `SM2_TableS1_day_by_cave` | Day median and days above threshold; in the script |
+| `SM2_TableS2_day_by_logger` | Same, per logger; in the script |
+| `SM2_TableS3_coherence_complete` | `coherence_peaks()`, raw |
+| `SI_TableS1_logger_inventory` | `data/logger_placement.csv` + `logger_record_span()` |
+| `SI_TableS2_detrend_df_sweep` | Spline-df sweep; in the script |
+| `SI_TableS3_ccf_detrended` | `ccf_summary()`, detrended |
+| `SI_TableS4_coherence_detrended` | `coherence_peaks()`, detrended |
+| `SI_TableS5_te_detrended` | `te_summary()`, detrended |
+| `SI_TableS6_teopt_detrended` | `teopt_results()`, detrended (`*` marks u* on a grid edge; typeset as a dagger) |
+
+### Figure inputs (`figures/analysis/`, each from `data/` only)
+
+| Output | Contents |
+|---|---|
 | `A04_nightly_minimum_winter` | Minimum Tw of each logger-night, winter |
 | `A05_daily_cave_summary` | Daily median/quartiles per cave |
-| `A06_detrend_df_sweep` | Spline-df sweep (residual SD, variance removed, KPSS passes) |
 | `A07_ccf_summary_{raw,detrended}` | CCF peak lag and correlation per pair |
 | `A08_coherence_summary_{raw,detrended}` | Peak coherency, period, phase delay per pair |
 | `A09_coherence_spectra_detrended` | Coherency and delay at every frequency |
 | `A10_te_summary_{raw,detrended}` | Effective TE each way, net, p-values |
 | `A11_teopt_summary_{raw,detrended}` | Delay-optimized TE: u*, surrogate p, ETE at u* |
 | `A12_teopt_profiles_detrended` | TE versus delay u per pair and direction |
-| `A13_lagboot_{raw,detrended}` | Per-lag bootstrap interval of the CCF |
-| `A14_variant_comparison` | Raw vs detrended for each statistic. Reads A07, A08, A10, A11, A13. Not published, but backs the Supplement's robustness text. |
-
-### Publication tables
-
-| Output | Built from |
-|---|---|
-| `MS_Table1_logger_inventory` | `data/logger_placement.csv` + A01 |
-| `MS_Table2_winter_night_by_cave` | A02 (Nov–Feb rows, night columns) |
-| `MS_Table3_winter_nightly_minimum` | A04 |
-| `MS_Table4_winter_night_by_logger` | A03 (Nov–Feb rows, night columns) |
-| `MS_Table5_coherence_raw` | A08 raw |
-| `SM2_TableS1_day_by_cave` | A02 (day columns) |
-| `SM2_TableS2_day_by_logger` | A03 (day columns) |
-| `SM2_TableS3_coherence_complete` | A08 raw |
-| `SI_TableS1_logger_inventory` | `data/logger_placement.csv` + A01 |
-| `SI_TableS2_detrend_df_sweep` | A06 |
-| `SI_TableS3_ccf_detrended` | A07 detrended |
-| `SI_TableS4_coherence_detrended` | A08 detrended |
-| `SI_TableS5_te_detrended` | A10 detrended |
-| `SI_TableS6_teopt_detrended` | A11 detrended (`*` marks u* on a grid edge; typeset as a dagger) |
+| `A13_lagboot_detrended` | Per-lag bootstrap interval of the CCF |
 
 ### Figures
 
@@ -123,7 +128,7 @@ the raw-data sheets of SM2.
 
 ## What reproduces exactly
 
-- All directional tables (CCF, coherence, transfer entropy, TE-optimal, lag
+- All directional results (CCF, coherence, transfer entropy, TE-optimal, lag
   bootstrap, raw and detrended) and the spline-df sweep match the analysis
   repo's workbooks cell for cell.
 - SM2 Table S3 matches the published workbook exactly. SI Table S6 matches the

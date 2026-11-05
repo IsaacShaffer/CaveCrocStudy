@@ -2,34 +2,20 @@
 # run_all.R -- regenerate every publication table and figure
 # =============================================================================
 # Usage (from pub_code/):
-#   Rscript run_all.R            # everything, in dependency order (~30 min)
+#   Rscript run_all.R            # everything (~50 min)
 #   Rscript run_all.R MS_        # only scripts whose name contains "MS_"
-#   Rscript run_all.R --keep-cache   # reuse cached TE-optimal results
 #
 # Each script runs in its own R process, so every one is proven to work on its
-# own given its input tables. Order: analysis tables -> publication tables ->
-# figures. A pattern filter does not pull in upstream scripts; their tables
-# must already exist.
+# own. Publication tables need only the data. Figures read intermediate tables
+# from figures/analysis/, which run first; a pattern filter does not pull those
+# in, so they must already exist when running figures alone.
 # =============================================================================
 
 if (!file.exists("lib/pub_setup.R")) stop("Run from pub_code/: Rscript run_all.R")
 
-args       <- commandArgs(trailingOnly = TRUE)
-keep_cache <- "--keep-cache" %in% args
-pattern    <- setdiff(args, "--keep-cache")
+pattern <- commandArgs(trailingOnly = TRUE)
 
 stages <- list(
-  "tables/analysis" = c(
-    "A01_logger_record_span", "A02_diel_cave_month", "A03_diel_logger_month",
-    "A04_nightly_minimum_winter", "A05_daily_cave_summary", "A06_detrend_df_sweep",
-    "A07_ccf_summary_raw", "A07_ccf_summary_detrended",
-    "A08_coherence_summary_raw", "A08_coherence_summary_detrended",
-    "A09_coherence_spectra_detrended",
-    "A10_te_summary_raw", "A10_te_summary_detrended",
-    "A11_teopt_summary_raw", "A11_teopt_summary_detrended",
-    "A12_teopt_profiles_detrended",
-    "A13_lagboot_raw", "A13_lagboot_detrended",
-    "A14_variant_comparison"),
   "tables/publication" = c(
     "MS_Table1_logger_inventory", "MS_Table2_winter_night_by_cave",
     "MS_Table3_winter_nightly_minimum", "MS_Table4_winter_night_by_logger",
@@ -37,6 +23,14 @@ stages <- list(
     "SM2_TableS1_day_by_cave", "SM2_TableS2_day_by_logger", "SM2_TableS3_coherence_complete",
     "SI_TableS1_logger_inventory", "SI_TableS2_detrend_df_sweep", "SI_TableS3_ccf_detrended",
     "SI_TableS4_coherence_detrended", "SI_TableS5_te_detrended", "SI_TableS6_teopt_detrended"),
+  "figures/analysis" = c(
+    "A04_nightly_minimum_winter", "A05_daily_cave_summary",
+    "A07_ccf_summary_raw", "A07_ccf_summary_detrended",
+    "A08_coherence_summary_raw", "A08_coherence_summary_detrended",
+    "A09_coherence_spectra_detrended",
+    "A10_te_summary_raw", "A10_te_summary_detrended",
+    "A11_teopt_summary_raw", "A11_teopt_summary_detrended",
+    "A12_teopt_profiles_detrended", "A13_lagboot_detrended"),
   "figures" = c(
     "MS_Fig2_daily_median_by_cave", "MS_Fig3_winter_nightly_minimum_boxplot",
     "MS_Fig4_coherence_delay_matrix_raw",
@@ -56,7 +50,6 @@ if (length(setdiff(on_disk, scripts))) stop("Not in run order: ", paste(setdiff(
 if (length(setdiff(scripts, on_disk))) stop("Missing script: ", paste(setdiff(scripts, on_disk), collapse = ", "))
 
 if (length(pattern)) scripts <- scripts[grepl(paste(pattern, collapse = "|"), scripts)]
-if (!keep_cache) unlink("output/cache/teopt_*.rds")
 
 rscript <- file.path(R.home("bin"), "Rscript")
 dir.create("output/logs", recursive = TRUE, showWarnings = FALSE)

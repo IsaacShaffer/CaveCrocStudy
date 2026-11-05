@@ -2,9 +2,15 @@
 # MS_Fig2_daily_median_by_cave.R
 # -----------------------------------------------------------------------------
 # Output : output/figures/MS_Fig2_daily_median_by_cave.png and .pdf
-# What   : Manuscript Fig. 2. Daily median Tw per cave with the 25th-75th percentile ribbon and the thermal threshold. (The published figure also carries a crocodile graphic added by hand.)
+# What   : Manuscript Fig. 2. Daily median water temperature per cave over the
+#          analysis window, with the 25th-75th percentile band and the threshold.
 # Inputs : A05_daily_cave_summary
 # Run from pub_code/:  Rscript figures/MS_Fig2_daily_median_by_cave.R
+# =============================================================================
+# Shows the seasonal setting for the winter results: both caves cool from
+# August into winter and approach the 24.25 degC threshold. The band shows the
+# spread across loggers and hours each day (the caption says "range among
+# monitoring sites"; see README.md).
 # =============================================================================
 source("lib/pub_setup.R")
 

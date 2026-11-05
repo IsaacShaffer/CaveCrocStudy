@@ -3,12 +3,17 @@
 # -----------------------------------------------------------------------------
 # Output : output/tables/publication/MS_Table3_winter_nightly_minimum.csv
 # What   : Manuscript Table 3. Per logger: coldest winter nightly minimum (T_min), 5th and 10th percentiles and median of nightly minima.
-# Inputs : A04_nightly_minimum_winter (loggers with no winter nights shown as --)
+# Inputs : data/all_cave_temp_data_ext.xlsx
 # Run from pub_code/:  Rscript tables/publication/MS_Table3_winter_nightly_minimum.R
+# =============================================================================
+# Summarizes each station's nightly minima (A04). T_min is the single coldest
+# hour; the 5th and 10th percentiles describe the coldest 5% and 10% of
+# nights, which are less sensitive to one unusual reading than T_min; the
+# median is a typical night's minimum.
 # =============================================================================
 source("lib/pub_setup.R")
 
-minima <- read_analysis("A04_nightly_minimum_winter")
+minima <- winter_nightly_minima()   # lib/study_data.R
 
 stats <- minima %>%
   group_by(Cave, Logger) %>%
@@ -19,11 +24,8 @@ stats <- minima %>%
             .groups = "drop")
 
 # Every logger in the roster gets a row; Croc-2 L1 and L5 failed before winter.
-roster <- sensor_style %>%
-  transmute(Cave = ifelse(grepl("^Croc2", Logger_Name), "Croc-2", "KHC"),
-            Logger = short_logger(Logger_Name))
-
-tbl <- roster %>%
+tbl <- LOGGERS %>%
+  select(Cave, Logger) %>%
   left_join(stats, by = c("Cave", "Logger")) %>%
   arrange(Cave, Logger) %>%
   transmute(Cave     = ms_cave(Cave),

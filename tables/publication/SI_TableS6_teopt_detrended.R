@@ -3,8 +3,11 @@
 # -----------------------------------------------------------------------------
 # Output : output/tables/publication/SI_TableS6_teopt_detrended.csv
 # What   : Supplement Table S6. Delay-optimized TE per pair (detrended): CCF lag, optimal delay u* with surrogate p each way (* = pinned at a grid edge), ETE at u*, net, dominant direction.
-# Inputs : A11_teopt_summary_detrended
+# Inputs : data/all_cave_temp_data_ext.xlsx
 # Run from pub_code/:  Rscript tables/publication/SI_TableS6_teopt_detrended.R
+# =============================================================================
+# A u* on the edge of the 1-24 h scan is marked because the true optimum may
+# lie outside the scanned range; read those delays as bounds, not estimates.
 # =============================================================================
 source("lib/pub_setup.R")
 
@@ -12,7 +15,12 @@ source("lib/pub_setup.R")
 # (typeset in the Supplement as a dagger).
 u_with_p <- function(u, p, edge) sprintf("%d%s (%.2f)", as.integer(u), ifelse(edge, "*", ""), p)
 
-tbl <- read_analysis("A11_teopt_summary_detrended") %>%
+# Detrended variant: seasonal drift and the 24 h cycle removed from each
+# series (harmonic_detrend in lib/study_data.R), so the statistics reflect
+# station-to-station timing rather than forcing shared by all stations.
+pairs <- prepare_pairs(harmonic_detrend)
+
+tbl <- teopt_results(pairs)$summary %>%   # slow: several minutes
   arrange(Cave, Pair) %>%
   transmute(Cave, Pair,
             `u_CCF`          = sprintf("%+.2f", u_ccf_hr),
