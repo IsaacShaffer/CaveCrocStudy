@@ -1,7 +1,11 @@
 # CaveCrocStudy: publication tables and figures
 
-Code that regenerates every code-derived table and figure in the three
-publication documents, with one script per output:
+Code for *Thermal Behavior of Crocodile Caves in Central Belize* (Wynne,
+Shaffer and Roberts; *Diversity*, in review). It regenerates every
+code-derived table and figure in the publication documents, with one script
+per output, plus the thermal-threshold analysis of the Lang (1979) data
+(`S01_TherCroc.R`, see [Thermal threshold analysis](#thermal-threshold-analysis)).
+The publication documents are:
 
 - **MS**: the manuscript (`Wynne-etal_CaveCrocs.docx`, JJW 23 Jul 2026 version)
 - **SM2**: Supplemental Material File 2 (`SM_File2_SupportingTables_RawData_jjw13aug26.xlsx`)
@@ -20,6 +24,9 @@ The repository holds only the R code for now. Before running, put the inputs in
 - `all_cave_temp_data_ext.xlsx`: hourly Tw, one sheet per logger
 - `logger_placement.csv`: columns `Serial,Cave,Logger,Location,Placement`, with
   the location and placement text exactly as printed in MS Table 1
+- `Croc_Lang.csv`: body temperatures of 10 captive juvenile *C. acutus* under
+  four conditions (Lang 1979), columns `Crocodile_ID,Condition,Temperature`;
+  read only by `S01_TherCroc.R`
 
 R ≥ 4.6 and these packages are required: dplyr, tidyr, purrr, lubridate,
 ggplot2, patchwork, readxl, openxlsx, tseries, RTransferEntropy.
@@ -56,9 +63,10 @@ its functions carry the reasoning for the methods they implement:
 | `lib/directional.R` | Cross-correlation, coherence, transfer entropy and delay-optimized TE, each shared by a publication table and a figure input. |
 | `lib/plots.R` | `save_figure`, facet height, and the pair-matrix heatmaps (MS Fig. 4, SI Figs. S1, S6, S7, S10). |
 | `tables/publication/*.R` | 14 publication tables, from the data → `output/tables/publication/*.csv` |
+| `tables/publication/S01_TherCroc.R` | Thermal-threshold models of the Lang (1979) data → three CSVs in the working directory (run separately; see below) |
 | `figures/analysis/A*.R` | 13 intermediate tables, from the data, read by figures → `output/figures/analysis/*.csv` |
 | `figures/*.R` | 14 publication figures → `output/figures/*.png` + `.pdf` |
-| `run_all.R` | Runs all 41 scripts (tables, figure inputs, figures), each in a fresh R process. |
+| `run_all.R` | Runs the 41 temperature-analysis scripts (tables, figure inputs, figures), each in a fresh R process. `S01_TherCroc.R` is not in its schedule yet, so `run_all.R` currently stops at its start-up check ("Not in run order"). |
 
 ## Outputs and their inputs
 
@@ -113,6 +121,40 @@ its functions carry the reasoning for the methods they implement:
 
 MS Fig. 1 (map) and Fig. 5 (camera stills) are not code-generated. Neither are
 the raw-data sheets of SM2.
+
+## Thermal threshold analysis
+
+`tables/publication/S01_TherCroc.R` (J. Judson Wynne, 24 October 2026) derives
+the thermal reference value from the Lang (1979) body-temperature data with
+linear mixed-effects models, crocodile identity as a random intercept:
+
+1. all observations pooled across experimental conditions;
+2. the fasted-nighttime condition as the reference level.
+
+The upper Wald 95% confidence bound of model 1 is the thermal reference value
+used in the manuscript.
+
+- **Input:** `Croc_Lang.csv`, read from the working directory.
+- **Outputs:** `Model_Results.csv`, `Model_Diagnostics.csv` and
+  `Variance_Components.csv`, written to the working directory.
+- **Packages:** lme4, lmerTest, performance, DHARMa.
+- **R version:** 4.6.0 (2026-04-24); full session information in
+  `R_SessionInfo.txt`.
+
+The script uses classic Mac (CR-only) line endings, which `Rscript` reads as a
+single comment line, so run it with `source()` from the folder holding the
+data:
+
+```bash
+cd data && Rscript -e 'source("../tables/publication/S01_TherCroc.R")'
+```
+
+**AI-assisted code development.** Portions of the R scripts included in this
+repository were developed with assistance from generative artificial
+intelligence tools. All code was reviewed, modified as necessary, executed,
+debugged, and validated by the authors prior to use in analyses and manuscript
+preparation. The authors assume full responsibility for the accuracy and
+implementation of all code and results.
 
 ## Definitions used here
 
