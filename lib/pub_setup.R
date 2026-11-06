@@ -72,8 +72,9 @@ WINTER_MONTHS <- format(seq(WINTER[1], WINTER[2], by = "month"), "%Y-%m")
 # Directional-analysis settings (reported in the Supplement).
 MIN_OVERLAP <- 200L   # a pair needs >= 200 unbroken shared hours to be analysed
 PERIOD      <- 24     # diurnal period removed by the detrend (h)
-SPLINE_DF   <- 8L     # spline df of the detrend; smallest df that makes all 10
-                      # loggers KPSS-stationary (SI Table S2)
+SPLINE_DF   <- 8L     # spline df of the detrend: smallest df at which all 10
+                      # loggers are KPSS-stationary AND the noise removed per
+                      # step up in df has levelled off (SI Table S2)
 CCF_LAGMAX  <- 24L    # +/- one diurnal cycle of lags (h)
 TE          <- list(lx = 1L, ly = 1L, quantiles = c(25, 50, 75), nboot = 300L, shuffles = 100L)
 TEOPT       <- list(lag_max = 24L, nsurr = 100L, shuffles = 100L)

@@ -63,10 +63,10 @@ its functions carry the reasoning for the methods they implement:
 | `lib/directional.R` | Cross-correlation, coherence, transfer entropy and delay-optimized TE, each shared by a publication table and a figure input. |
 | `lib/plots.R` | `save_figure`, facet height, and the pair-matrix heatmaps (MS Fig. 4, SI Figs. S1, S6, S7, S10). |
 | `tables/publication/*.R` | 14 publication tables, from the data → `output/tables/publication/*.csv` |
-| `tables/publication/S01_TherCroc.R` | Thermal-threshold models of the Lang (1979) data → three CSVs in the working directory (run separately; see below) |
+| `tables/publication/S01_TherCroc.R` | Thermal-threshold models of the Lang (1979) data → `output/tables/threshold/*.csv` when run by `run_all.R` (see below) |
 | `figures/analysis/A*.R` | 13 intermediate tables, from the data, read by figures → `output/figures/analysis/*.csv` |
 | `figures/*.R` | 14 publication figures → `output/figures/*.png` + `.pdf` |
-| `run_all.R` | Runs the 41 temperature-analysis scripts (tables, figure inputs, figures), each in a fresh R process. `S01_TherCroc.R` is not in its schedule yet, so `run_all.R` currently stops at its start-up check ("Not in run order"). |
+| `run_all.R` | Runs the 41 temperature-analysis scripts (tables, figure inputs, figures), each in a fresh R process, plus `S01_TherCroc.R` (skipped, with exit status 1, if its packages are missing). |
 
 ## Outputs and their inputs
 
@@ -137,13 +137,15 @@ used in the manuscript.
 - **Input:** `Croc_Lang.csv`, read from the working directory.
 - **Outputs:** `Model_Results.csv`, `Model_Diagnostics.csv` and
   `Variance_Components.csv`, written to the working directory.
+  `run_all.R` runs the script inside `output/tables/threshold/` with a copy of
+  `data/Croc_Lang.csv`, so the outputs land there and `data/` stays clean.
 - **Packages:** lme4, lmerTest, performance, DHARMa.
 - **R version:** 4.6.0 (2026-04-24); full session information in
   `R_SessionInfo.txt`.
 
 The script uses classic Mac (CR-only) line endings, which `Rscript` reads as a
-single comment line, so run it with `source()` from the folder holding the
-data:
+single comment line, so `run_all.R` runs it with `source()`. To run it by hand,
+do the same from a folder holding the data (outputs then go to `data/`):
 
 ```bash
 cd data && Rscript -e 'source("../tables/publication/S01_TherCroc.R")'

@@ -10,10 +10,16 @@
 # =============================================================================
 # The detrended variant removes a natural-spline trend whose flexibility is set
 # by its df. Too few df leave seasonal drift in (series stay non-stationary);
-# too many start removing real multi-day signal. This sweep justifies
-# SPLINE_DF = 8: the smallest df at which all 10 loggers pass the KPSS test
-# for level stationarity (statistic below the 5% critical value), after which
-# the residual SD barely falls.
+# too many start removing real multi-day signal. The sweep shows three
+# regimes:
+#   df 2-4    under-modelled: not all loggers pass the KPSS test for level
+#             stationarity (statistic below the 5% critical value);
+#   df 6-16   all 10 pass; from df 8 on, each step up removes only ~0.01 degC
+#             more residual SD (0.033 at df 6), a plateau;
+#   df 20-24  the residual SD drops again (0.040 at df 20) as the spline
+#             starts absorbing sub-daily structure: overfitting.
+# SPLINE_DF = 8 is the smallest df that is KPSS-stationary for all 10 loggers
+# AND on the plateau, below the overfitting range (Supplement).
 # =============================================================================
 source("lib/pub_setup.R")
 

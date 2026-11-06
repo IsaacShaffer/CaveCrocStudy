@@ -9,6 +9,10 @@
 # own. Publication tables need only the data. Figures read intermediate tables
 # from figures/analysis/, which run first; a pattern filter does not pull those
 # in, so they must already exist when running figures alone.
+#
+# S01_TherCroc.R (thermal threshold, Lang 1979 data) is run differently; see
+# THRESHOLD_SCRIPT below. If its packages are missing it is skipped, the rest
+# still runs, and run_all.R exits with status 1.
 # =============================================================================
 
 if (!file.exists("lib/pub_setup.R")) stop("Run from pub_code/: Rscript run_all.R")
@@ -17,6 +21,7 @@ pattern <- commandArgs(trailingOnly = TRUE)
 
 stages <- list(
   "tables/publication" = c(
+    "S01_TherCroc",
     "MS_Table1_logger_inventory", "MS_Table2_winter_night_by_cave",
     "MS_Table3_winter_nightly_minimum", "MS_Table4_winter_night_by_logger",
     "MS_Table5_coherence_raw",
@@ -51,13 +56,39 @@ if (length(setdiff(scripts, on_disk))) stop("Missing script: ", paste(setdiff(sc
 
 if (length(pattern)) scripts <- scripts[grepl(paste(pattern, collapse = "|"), scripts)]
 
+# S01_TherCroc.R reads Croc_Lang.csv from, and writes Model_Results.csv,
+# Model_Diagnostics.csv and Variance_Components.csv to, its working directory.
+# Its CR-only line endings make `Rscript file.R` read it as one comment line
+# (it would silently do nothing), while source() parses it correctly. So it is
+# source()d inside its own output folder, holding a copy of the input.
+THRESHOLD_SCRIPT <- "tables/publication/S01_TherCroc.R"
+THRESHOLD_DIR    <- "output/tables/threshold"
+THRESHOLD_INPUT  <- "data/Croc_Lang.csv"
+THRESHOLD_PKGS   <- c("lme4", "lmerTest", "performance", "DHARMa")
+
+script_args <- function(s) {
+  if (s != THRESHOLD_SCRIPT) return(s)
+  dir.create(THRESHOLD_DIR, recursive = TRUE, showWarnings = FALSE)
+  if (!file.copy(THRESHOLD_INPUT, THRESHOLD_DIR, overwrite = TRUE)) stop("Cannot copy ", THRESHOLD_INPUT)
+  c("-e", shQuote(sprintf('setwd("%s"); source("%s")', THRESHOLD_DIR, normalizePath(s))))
+}
+
 rscript <- file.path(R.home("bin"), "Rscript")
 dir.create("output/logs", recursive = TRUE, showWarnings = FALSE)
+skipped <- character()
 t_all <- Sys.time()
 for (s in scripts) {
+  if (s == THRESHOLD_SCRIPT) {
+    missing <- THRESHOLD_PKGS[!vapply(THRESHOLD_PKGS, requireNamespace, logical(1), quietly = TRUE)]
+    if (length(missing)) {
+      cat(sprintf("%-6s %-58s missing: %s\n", "SKIP", s, paste(missing, collapse = ", ")))
+      skipped <- c(skipped, s)
+      next
+    }
+  }
   log <- file.path("output/logs", sub("\\.R$", ".log", basename(s)))
   t0 <- Sys.time()
-  status <- system2(rscript, s, stdout = log, stderr = log)
+  status <- system2(rscript, script_args(s), stdout = log, stderr = log)
   cat(sprintf("%-6s %-58s %6.0f s\n", if (status == 0) "ok" else "FAILED", s,
               as.numeric(difftime(Sys.time(), t0, units = "secs"))))
   if (status != 0) {
@@ -65,5 +96,9 @@ for (s in scripts) {
     stop("Stopped at ", s, " (log: ", log, ")")
   }
 }
-cat(sprintf("\nDone: %d scripts in %.1f min\n", length(scripts),
+cat(sprintf("\nDone: %d scripts in %.1f min\n", length(scripts) - length(skipped),
             as.numeric(difftime(Sys.time(), t_all, units = "mins"))))
+if (length(skipped)) {
+  cat("Skipped (install the missing packages to run):", skipped, sep = "\n  ")
+  quit(status = 1)
+}
